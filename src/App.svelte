@@ -1,65 +1,80 @@
 <script lang="ts">
-  import logo from './assets/svelte.png'
-  import Counter from './lib/Counter.svelte'
+  import WikiItem from "./models/WikiItem";
+
+  let isLoading = false;
+  let wikiItems = [] as WikiItem[];
+
+  const apiUrl = "https://en.wikipedia.org/w/api.php";
+  async function search(keyword: string) {
+    isLoading = true;
+
+    const args = {
+      action: "opensearch",
+      format: "json",
+      search: keyword,
+      namespace: "0",
+      limit: "10",
+      origin: "*",
+    };
+
+    const response = await fetch(apiUrl + "?" + new URLSearchParams(args));
+    const [_, titles, __, urls] = (await response.json()) as [
+      string,
+      string[],
+      string[],
+      string[]
+    ];
+
+    wikiItems = titles.map((title, idx) => new WikiItem(title, urls[idx]));
+
+    isLoading = false;
+  }
+
+  let timeout: number;
+  function searchHandler(text: string) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => search(text), 250);
+  }
 </script>
 
-<main>
-  <img src={logo} alt="Svelte Logo" />
-  <h1>Hello Typescript!</h1>
-
-  <Counter />
-
-  <p>
-    Visit <a href="https://svelte.dev">svelte.dev</a> to learn how to build Svelte
-    apps.
-  </p>
-
-  <p>
-    Check out <a href="https://github.com/sveltejs/kit#readme">SvelteKit</a> for
-    the officially supported framework, also powered by Vite!
-  </p>
+<main class="container mx-auto h-screen grid place-items-center">
+  <section
+    class="max-w-xs w-full border-slate-200 shadow hover:shadow-md transition-all rounded-xl p-4"
+  >
+    <div class="grid grid-cols-1 gap-4">
+      <input
+        on:input={(e) => searchHandler(e.currentTarget.value)}
+        class="border border-slate-400 rounded px-3 py-2 disabled:animate-pulse"
+        placeholder="Search..."
+        disabled={isLoading}
+      />
+      <a
+        href="https://en.wikipedia.org/wiki/Special:Random"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-center bg-slate-50/75 hover:bg-slate-50 border-slate-200 px-4 py-3 rounded shadow hover:shadow-md transition-all disabled:animate-pulse"
+        disabled={isLoading}
+      >
+        Random
+      </a>
+    </div>
+  </section>
+  {#if wikiItems.length && !isLoading}
+    <section
+      class="max-w-xs w-full border-slate-200 shadow hover:shadow-md transition-all rounded-xl p-4"
+    >
+      <div class="grid grid-cols-1 gap-4">
+        {#each wikiItems as wiki}
+          <a
+            href={wiki.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-bold truncate border-slate-200 shadow hover:shadow-md transition-all rounded-xl p-4"
+          >
+            {wiki.title}
+          </a>
+        {/each}
+      </div>
+    </section>
+  {/if}
 </main>
-
-<style>
-  :root {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-      Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  }
-
-  main {
-    text-align: center;
-    padding: 1em;
-    margin: 0 auto;
-  }
-
-  img {
-    height: 16rem;
-    width: 16rem;
-  }
-
-  h1 {
-    color: #ff3e00;
-    text-transform: uppercase;
-    font-size: 4rem;
-    font-weight: 100;
-    line-height: 1.1;
-    margin: 2rem auto;
-    max-width: 14rem;
-  }
-
-  p {
-    max-width: 14rem;
-    margin: 1rem auto;
-    line-height: 1.35;
-  }
-
-  @media (min-width: 480px) {
-    h1 {
-      max-width: none;
-    }
-
-    p {
-      max-width: none;
-    }
-  }
-</style>
